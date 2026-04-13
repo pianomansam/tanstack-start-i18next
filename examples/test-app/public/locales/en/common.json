@@ -10,5 +10,11 @@
   "goToAbout": "About",
   "backToHome": "Back to Home",
   "aboutTitle": "About",
-  "aboutDescription": "This is the about page. Internationalization is working correctly."
+  "aboutDescription": "This is the about page. Internationalization is working correctly.",
+  "transHeading": "Rich content with <Trans>",
+  "transIntro": "The <code>&lt;Trans&gt;</code> component lets you embed JSX — links, bold text, custom components — directly inside your translations.",
+  "builtWith": "This app is built with <bold>TanStack Start</bold> and powered by <italic>i18next</italic>.",
+  "visitDocs": "Read the <docsLink>i18next documentation</docsLink> to learn more about rich translations.",
+  "Welcome": "Welcome",
+  "You have {{count}} unread messages": "You have {{count}} unread messages"
 }

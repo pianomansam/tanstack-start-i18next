@@ -14,9 +14,10 @@ export interface I18nDetectionConfig {
  * standard i18next options (fallbackLng, supportedLngs, defaultNS, interpolation,
  * debug, etc.) are available at the top level with correct types.
  *
- * Two properties are added on top of InitOptions:
+ * Three properties are added on top of InitOptions:
  * - `loadTranslations` — how to load a namespace's translations for a given locale
  * - `detection`        — locale detection strategy configuration
+ * - `plugins`          — i18next plugins to register via `.use()` before init
  *
  * Two InitOptions properties are omitted:
  * - `resources` — built internally from loadTranslations; do not set directly
@@ -42,6 +43,30 @@ export interface I18nConfig extends Omit<InitOptions, 'resources' | 'lng' | 'fal
   ) => Promise<Record<string, unknown>>
   /** Locale detection configuration */
   detection?: I18nDetectionConfig
+  /**
+   * i18next plugins to register via `.use()` before each instance is initialised.
+   * Accepts anything that `i18n.use()` accepts — class-style plugins, object plugins,
+   * or pre-instantiated modules.
+   *
+   * Both server and client instances receive these plugins, so plugins that only make
+   * sense in one environment (e.g. an HTTP backend for save-missing) should guard
+   * against the wrong runtime themselves, or be conditionally included here.
+   *
+   * @example
+   * ```ts
+   * import HttpBackend from 'i18next-http-backend'
+   *
+   * defineI18nConfig({
+   *   plugins: [HttpBackend],
+   *   backend: {
+   *     addPath: '/api/i18n/add/{{lng}}/{{ns}}',
+   *   },
+   *   saveMissing: true,
+   *   // ...
+   * })
+   * ```
+   */
+  plugins?: Array<Parameters<i18n['use']>[0]>
 }
 
 /** Normalize InitOptions['ns'] (string | string[] | undefined) to a string array */

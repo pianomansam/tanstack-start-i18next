@@ -10,5 +10,11 @@
   "goToAbout": "À propos",
   "backToHome": "Retour à l'accueil",
   "aboutTitle": "À propos",
-  "aboutDescription": "Ceci est la page À propos. L'internationalisation fonctionne correctement."
+  "aboutDescription": "Ceci est la page À propos. L'internationalisation fonctionne correctement.",
+  "transHeading": "Contenu enrichi avec <Trans>",
+  "transIntro": "Le composant <code>&lt;Trans&gt;</code> vous permet d'intégrer du JSX — liens, texte en gras, composants personnalisés — directement dans vos traductions.",
+  "builtWith": "Cette application est construite avec <bold>TanStack Start</bold> et propulsée par <italic>i18next</italic>.",
+  "visitDocs": "Lisez la <docsLink>documentation i18next</docsLink> pour en savoir plus sur les traductions enrichies.",
+  "Welcome": "Bienvenue",
+  "You have {{count}} unread messages": "Vous avez {{count}} messages non lus"
 }

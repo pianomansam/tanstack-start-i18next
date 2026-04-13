@@ -20,9 +20,13 @@ Standard `react-i18next` [SSR support](https://react.i18next.com/latest/ssr) is 
   - [6. Client Entry](#6-client-entry)
   - [7. Root Route](#7-root-route)
   - [8. Components and Pages](#8-components-and-pages)
+- [The Trans Component](#the-trans-component)
 - [Locale Detection](#locale-detection)
 - [Namespace Splitting Per Route](#namespace-splitting-per-route)
 - [Language Switching](#language-switching)
+- [i18next Plugins](#i18next-plugins)
+  - [Save-Missing Keys with i18next-http-backend](#save-missing-keys-with-i18next-http-backend)
+  - [createAddMissingHandler](#createaddmissinghandler)
 - [Remote Translation Files](#remote-translation-files)
 - [Testing](#testing)
 - [API Reference](#api-reference)
@@ -36,7 +40,7 @@ Standard `react-i18next` [SSR support](https://react.i18next.com/latest/ssr) is 
 2. **Locale detection** — The middleware detects the user's locale from the request: cookie first, then `Accept-Language` header, then URL path segment. Falls back to `fallbackLng`.
 3. **Router context** — The resolved `locale`, the `i18n` instance, and a serializable `i18nStore` (the loaded translation resources) are injected into the TanStack Router context via `next({ context: { ... } })`.
 4. **Client hydration** — `I18nScript` embeds the resolved locale and translation resources as JSON in the server-rendered HTML. In the client entry, `hydrateI18n(config)` reads that JSON and initializes a matching i18next instance before React's `hydrateRoot` runs — no async fetch, no hydration mismatch.
-5. **React integration** — `I18nProvider` wraps the app, making `useTranslation`, `useLocale`, and `useChangeLocale` available in all route components.
+5. **React integration** — `I18nProvider` wraps the app, making `useTranslation`, `Trans`, `useLocale`, and `useChangeLocale` available in all route components.
 
 ---
 
@@ -256,6 +260,130 @@ function HomePage() {
 
 ---
 
+## The Trans Component
+
+`<Trans>` is re-exported from `react-i18next` and works fully with this library — including SSR. Because `I18nProvider` wraps `I18nextProvider`, `Trans` automatically uses the correct i18next instance on both the server and the client.
+
+Use `Trans` whenever your translation values need to contain inline HTML elements, React components, or interpolated JSX.
+
+### Basic usage
+
+```tsx
+import { Trans } from 'tanstack-start-i18next'
+```
+
+Or directly from `react-i18next` — both import the same component.
+
+### Natural language keying (no i18nKey)
+
+You can omit `i18nKey` entirely. When you do, `Trans` uses the text content of its children as the lookup key:
+
+```tsx
+<Trans ns="common">Welcome</Trans>
+```
+
+i18next looks up the key `"Welcome"` in the `common` namespace and renders the translated value. If the key is missing it falls back to the literal children text. This pattern — known as natural language keying — lets you write readable JSX without inventing key names:
+
+```json
+// en/common.json — the English text is both the key and the value
+{ "Welcome": "Welcome" }
+
+// fr/common.json — same key, translated value
+{ "Welcome": "Bienvenue" }
+```
+
+Interpolation works the same way:
+
+```tsx
+<Trans ns="common" values={{ count: 5 }}>
+  {'You have {{count}} unread messages'}
+</Trans>
+```
+
+```json
+{ "You have {{count}} unread messages": "You have {{count}} unread messages" }
+// fr:
+{ "You have {{count}} unread messages": "Vous avez {{count}} messages non lus" }
+```
+
+> Note: the string must be wrapped in `{' '}` (a JSX expression) rather than written as raw JSX text when it contains `{{` — otherwise JSX parsers may mishandle the curly braces.
+
+### Embedding HTML elements
+
+Define your translation value with named component tags:
+
+```json
+// en/common.json
+{
+  "welcome": "Welcome to <bold>TanStack Start</bold> with <italic>i18next</italic>."
+}
+```
+
+Then render it with `Trans`, mapping each tag name to a React element via the `components` prop. The element you provide is just the wrapper — its text content comes from the translation value, not from your JSX:
+
+```tsx
+<Trans
+  i18nKey="welcome"
+  ns="common"
+  components={{
+    bold: <strong />,
+    italic: <em />,
+  }}
+/>
+```
+
+Output: `Welcome to <strong>TanStack Start</strong> with <em>i18next</em>.`
+
+### Embedding links and interactive components
+
+```json
+{
+  "visitDocs": "Read the <docsLink>i18next documentation</docsLink> to learn more."
+}
+```
+
+```tsx
+<Trans
+  i18nKey="visitDocs"
+  ns="common"
+  components={{
+    docsLink: (
+      <a href="https://www.i18next.com" target="_blank" rel="noreferrer" />
+    ),
+  }}
+/>
+```
+
+### Interpolation inside Trans
+
+You can combine component tags with interpolation variables:
+
+```json
+{
+  "greeting": "Hello, <bold>{{name}}</bold>! You have <count>{{count}} messages</count>."
+}
+```
+
+```tsx
+<Trans
+  i18nKey="greeting"
+  ns="common"
+  values={{ name: 'Alice', count: 3 }}
+  components={{
+    bold: <strong />,
+    count: <span style={{ color: 'red' }} />,
+  }}
+/>
+```
+
+### SSR behavior
+
+`Trans` renders synchronously on the server using the translations already loaded by `createI18nMiddleware`. No additional data fetching or special setup is required — it works the same way `t()` does.
+
+> For the full `Trans` API (plural forms, context, `tOptions`, etc.) see the [react-i18next Trans documentation](https://react.i18next.com/latest/trans-component).
+
+---
+
 ## Locale Detection
 
 By default, the middleware detects the locale in this order:
@@ -344,6 +472,122 @@ function LanguageSwitcher() {
 ```
 
 After `changeLocale` is called, the cookie is updated. On the next full navigation or page reload, the server middleware picks up the cookie and renders in the new locale.
+
+---
+
+## i18next Plugins
+
+`I18nConfig` accepts a `plugins` field — an array of i18next plugins registered via `.use()` before each instance is initialized. This is identical to the standard i18next plugin API and accepts any plugin that `i18n.use()` accepts: class-style plugins, object plugins, or pre-instantiated modules.
+
+```ts
+import { defineI18nConfig } from 'tanstack-start-i18next'
+import SomePlugin from 'some-i18next-plugin'
+
+export const i18nConfig = defineI18nConfig({
+  // ...
+  plugins: [SomePlugin],
+})
+```
+
+Plugins are applied to **both server and client instances**. If a plugin only makes sense in one environment (e.g. an HTTP backend for save-missing), it should either guard against the wrong runtime internally, or be conditionally included:
+
+```ts
+plugins: typeof window !== 'undefined' ? [ClientOnlyPlugin] : [],
+```
+
+### Save-Missing Keys with i18next-http-backend
+
+A common use of `plugins` is wiring up [`i18next-http-backend`](https://github.com/i18next/i18next-http-backend) to report missing translation keys to a server endpoint during development. When a `t()` call or `<Trans>` encounters a key that doesn't exist, i18next POSTs it to your `addPath` URL so you can persist it to your translation files.
+
+#### 1. Install
+
+```bash
+pnpm add i18next-http-backend
+```
+
+#### 2. Configure
+
+```ts
+import { defineI18nConfig } from 'tanstack-start-i18next'
+import HttpBackend from 'i18next-http-backend'
+
+export const i18nConfig = defineI18nConfig({
+  supportedLngs: ['en', 'fr'],
+  fallbackLng: 'en',
+  ns: ['common'],
+  defaultNS: 'common',
+  loadTranslations: async (locale, namespace) => {
+    // loadTranslations still handles loading — i18next-http-backend is only
+    // used here for its addPath (save-missing) capability
+    if (typeof window === 'undefined') {
+      const { default: fs } = await import('node:fs/promises')
+      const { default: path } = await import('node:path')
+      const filePath = path.join(process.cwd(), 'public', 'locales', locale, `${namespace}.json`)
+      return JSON.parse(await fs.readFile(filePath, 'utf-8'))
+    }
+    const res = await fetch(`/locales/${locale}/${namespace}.json`)
+    return res.json()
+  },
+  // Register the plugin so it's wired into every i18next instance
+  plugins: [HttpBackend],
+  // Standard i18next-http-backend options (passed through InitOptions)
+  backend: {
+    addPath: '/api/i18n/add/{{lng}}/{{ns}}',
+  },
+  saveMissing: true,
+})
+```
+
+#### 3. Add the server-side route
+
+Use `createAddMissingHandler` to create the endpoint that receives missing key reports. See [createAddMissingHandler](#createaddmissinghandler) below.
+
+### createAddMissingHandler
+
+`createAddMissingHandler` returns a framework-agnostic `(Request, params) => Promise<Response>` handler that receives missing key POSTs from `i18next-http-backend` (or any compatible client) and calls your `onMissingKey` callback for each key.
+
+```ts
+import { createAddMissingHandler } from 'tanstack-start-i18next'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+
+const handler = createAddMissingHandler({
+  async onMissingKey(locale, namespace, key, fallbackValue) {
+    const filePath = path.join(
+      process.cwd(),
+      'public',
+      'locales',
+      locale,
+      `${namespace}.json`,
+    )
+    const translations = JSON.parse(await fs.readFile(filePath, 'utf-8'))
+    if (!(key in translations)) {
+      translations[key] = fallbackValue
+      await fs.writeFile(filePath, JSON.stringify(translations, null, 2))
+    }
+  },
+})
+```
+
+Wire it into a TanStack Start API route at the path your `addPath` template resolves to:
+
+```ts
+// src/routes/api/i18n/add.$lng.$ns.ts
+import { createAPIFileRoute } from '@tanstack/react-start/api'
+import { handler } from '../../../i18n-add-handler' // wherever you defined it
+
+export const APIRoute = createAPIFileRoute('/api/i18n/add/$lng/$ns')({
+  POST: ({ request, params }) => handler(request, params),
+})
+```
+
+The handler:
+- Reads `lng` and `ns` from the `params` object (URL path parameters)
+- Parses the POST body as `{ [missingKey]: fallbackValue }`
+- Calls `onMissingKey` for each entry
+- Returns `204 No Content` on success, `400 Bad Request` if the body is malformed
+
+> `createAddMissingHandler` is intentionally framework-agnostic — it works with any server that uses the Web `Request`/`Response` API.
 
 ---
 
@@ -451,7 +695,7 @@ loadTranslations: async (locale, namespace) => {
 
 ### Unit tests
 
-The library ships with [Vitest](https://vitest.dev) unit tests covering locale detection, the server instance factory, client hydration, and config. Run them from the repo root:
+The library ships with [Vitest](https://vitest.dev) unit tests covering locale detection, the server instance factory, client hydration, config, and the add-missing handler. Run them from the repo root:
 
 ```bash
 pnpm test
@@ -503,11 +747,14 @@ pnpm test:e2e --filter test-app
 | `I18nScript` | React component that renders `<script id="__i18n_store__">` with the current locale and resources. Place before `<Scripts />` in your root route. |
 | `I18nProvider` | React context provider wrapping `react-i18next`'s `I18nextProvider` |
 | `useTranslation` | Re-exported from `react-i18next` |
+| `Trans` | Re-exported from `react-i18next`. Renders translation values that contain inline JSX components. Works on server and client. |
 | `useLocale()` | Returns the current locale string |
 | `useChangeLocale()` | Returns a function to change locale and persist it in a cookie |
+| `createAddMissingHandler(config)` | Creates a `(Request, params) => Response` handler for the i18next `addPath` endpoint |
 | `detectLocale(config, ctx)` | Lower-level locale detection (exposed for custom scenarios) |
 | `I18nConfig` | TypeScript config type |
 | `I18nContext` | TypeScript type for the router context shape (`{ i18n, locale, i18nStore }`) |
+| `AddMissingConfig` | TypeScript type for `createAddMissingHandler` options |
 
 ---
 
@@ -521,7 +768,8 @@ pnpm test:e2e --filter test-app
 | `defaultNS` | first in `namespaces` | Namespace loaded on every request and used when no namespace is specified in `t()` |
 | `fallbackNS` | — | Namespace(s) to look in when a key is missing from the active namespace |
 | `loadTranslations` | *required* | `(locale, namespace) => Promise<object>` — called server-side during SSR and client-side for dynamic namespace loading |
+| `plugins` | `[]` | i18next plugins to register via `.use()` before each instance is initialized. Applied to both server and client instances. |
 | `detection.order` | `['cookie', 'header']` | Detection strategies in priority order: `'path'`, `'cookie'`, `'header'` |
 | `detection.cookieName` | `'i18next'` | Cookie name for locale persistence |
 | `detection.pathIndex` | `0` | URL path segment index containing the locale (for `'path'` detection) |
-| *(any `InitOptions` key)* | i18next defaults | `I18nConfig` extends i18next's `InitOptions`, so all standard i18next options (`debug`, `load`, `interpolation`, `pluralSeparator`, etc.) are valid at the top level |
+| *(any `InitOptions` key)* | i18next defaults | `I18nConfig` extends i18next's `InitOptions`, so all standard i18next options (`debug`, `load`, `interpolation`, `backend`, `saveMissing`, `pluralSeparator`, etc.) are valid at the top level |

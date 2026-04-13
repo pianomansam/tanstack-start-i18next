@@ -16,13 +16,16 @@ export async function initClientI18n(
   initialLocale: string,
   initialStore: Resource,
 ): Promise<I18nInstance> {
-  const { loadTranslations, detection, ns: _ns, ...initOptions } = config
+  const { loadTranslations, detection, plugins, ns: _ns, ...initOptions } = config
   const instance = i18next.createInstance()
 
   // Determine namespaces from the store
   const namespaces = Object.keys(initialStore[initialLocale] ?? {})
 
-  await instance.use(initReactI18next).init({
+  const chain = plugins
+    ? plugins.reduce((i, plugin) => i.use(plugin), instance.use(initReactI18next))
+    : instance.use(initReactI18next)
+  await chain.init({
     ...initOptions,
     lng: initialLocale,
     ns: namespaces.length > 0 ? namespaces : normalizeNs(config.ns),

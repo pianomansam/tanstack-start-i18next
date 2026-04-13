@@ -191,4 +191,51 @@ describe('createServerI18nInstance', () => {
       expect(b.language).toBe('en')
     })
   })
+
+  describe('plugin support (config.plugins)', () => {
+    it('calls a 3rdParty plugin init when the instance is created', async () => {
+      const pluginInit = vi.fn()
+      const fakePlugin = {
+        type: '3rdParty' as const,
+        init: pluginInit,
+      }
+      const config = makeConfig({ plugins: [fakePlugin] })
+      const { i18nInstance } = await createServerI18nInstance(config, 'en', ['common'])
+
+      expect(i18nInstance.isInitialized).toBe(true)
+      expect(pluginInit).toHaveBeenCalled()
+    })
+
+    it('calls all plugins when multiple are provided', async () => {
+      const initA = vi.fn()
+      const initB = vi.fn()
+      const pluginA = { type: '3rdParty' as const, init: initA }
+      const pluginB = { type: '3rdParty' as const, init: initB }
+
+      const config = makeConfig({ plugins: [pluginA, pluginB] })
+      await createServerI18nInstance(config, 'en', ['common'])
+
+      expect(initA).toHaveBeenCalled()
+      expect(initB).toHaveBeenCalled()
+    })
+
+    it('initialises without error when plugins is an empty array', async () => {
+      const config = makeConfig({ plugins: [] })
+      const { i18nInstance } = await createServerI18nInstance(config, 'en', ['common'])
+      expect(i18nInstance.isInitialized).toBe(true)
+    })
+
+    it('initialises without error when plugins is omitted', async () => {
+      const config = makeConfig()
+      const { i18nInstance } = await createServerI18nInstance(config, 'en', ['common'])
+      expect(i18nInstance.isInitialized).toBe(true)
+    })
+
+    it('translations still resolve correctly when plugins are present', async () => {
+      const fakePlugin = { type: '3rdParty' as const, init: vi.fn() }
+      const config = makeConfig({ plugins: [fakePlugin] })
+      const { i18nInstance } = await createServerI18nInstance(config, 'en', ['common'])
+      expect(i18nInstance.t('title', { ns: 'common' })).toBe('Welcome')
+    })
+  })
 })

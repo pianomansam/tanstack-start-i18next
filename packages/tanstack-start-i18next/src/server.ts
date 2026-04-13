@@ -32,9 +32,12 @@ export async function createServerI18nInstance(
     resources[locale][ns] = data as Record<string, string>
   }
 
-  const { loadTranslations, detection, ns: _ns, ...initOptions } = config
+  const { loadTranslations, detection, plugins, ns: _ns, ...initOptions } = config
   const instance = i18next.createInstance()
-  await instance.use(initReactI18next).init({
+  const chain = plugins
+    ? plugins.reduce((i, plugin) => i.use(plugin), instance.use(initReactI18next))
+    : instance.use(initReactI18next)
+  await chain.init({
     ...initOptions,
     lng: locale,
     ns: namespaces,

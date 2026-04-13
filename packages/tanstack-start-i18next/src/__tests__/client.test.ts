@@ -276,3 +276,43 @@ describe('hydrateI18n', () => {
     })
   })
 })
+
+describe('plugin support (config.plugins)', () => {
+  it('initialises without error when plugins is omitted', async () => {
+    const config = makeConfig()
+    const instance = await initClientI18n(config, 'en', EN_STORE)
+    expect(instance.isInitialized).toBe(true)
+  })
+
+  it('initialises without error when plugins is an empty array', async () => {
+    const config = makeConfig({ plugins: [] })
+    const instance = await initClientI18n(config, 'en', EN_STORE)
+    expect(instance.isInitialized).toBe(true)
+  })
+
+  it('accepts a 3rdParty plugin without throwing', async () => {
+    const fakePlugin = {
+      type: '3rdParty' as const,
+      init: vi.fn(),
+    }
+    const config = makeConfig({ plugins: [fakePlugin] })
+    const instance = await initClientI18n(config, 'en', EN_STORE)
+    expect(instance.isInitialized).toBe(true)
+  })
+
+  it('does not pass plugins into i18next init options (no unknown option warning)', async () => {
+    // plugins must be stripped from the options spread — i18next does not know this key
+    const fakePlugin = { type: '3rdParty' as const, init: vi.fn() }
+    const config = makeConfig({ plugins: [fakePlugin] })
+    const instance = await initClientI18n(config, 'en', EN_STORE)
+    // If plugins leaked into initOptions, i18next would store it; assert it did not
+    expect((instance.options as Record<string, unknown>).plugins).toBeUndefined()
+  })
+
+  it('translations still resolve correctly when a plugin is registered', async () => {
+    const fakePlugin = { type: '3rdParty' as const, init: vi.fn() }
+    const config = makeConfig({ plugins: [fakePlugin] })
+    const instance = await initClientI18n(config, 'en', EN_STORE)
+    expect(instance.t('title')).toBe('Welcome')
+  })
+})

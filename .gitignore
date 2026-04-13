@@ -1,0 +1,33 @@
+node_modules
+dist
+.vinxi
+.output
+.vercel
+.netlify
+.turbo
+
+# env files
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+.tanstack
+
+# Cypress
+screenshots
+videos
+
+# Vinxi / TanStack Start build artifacts
+app.config.timestamp_*.js
+
+# Claude Code
+.claude

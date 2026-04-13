@@ -1,0 +1,5 @@
+{
+  "greeting": "Hello!",
+  "intro": "This page demonstrates server-side rendered translations.",
+  "switchLanguage": "Switch to French"
+}

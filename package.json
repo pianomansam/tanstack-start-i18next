@@ -1,0 +1,12 @@
+{
+  "name": "tanstack-start-i18next-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --filter tanstack-start-i18next build",
+    "dev": "pnpm --filter test-app dev",
+    "test": "pnpm --filter tanstack-start-i18next test"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

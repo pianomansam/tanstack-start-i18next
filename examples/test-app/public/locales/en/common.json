@@ -1,0 +1,14 @@
+{
+  "title": "Welcome",
+  "description": "This is a TanStack Start app with i18next internationalization.",
+  "language": "Language",
+  "currentLocale": "Current locale: {{locale}}",
+  "greeting": "Hello!",
+  "intro": "This page demonstrates server-side rendered translations.",
+  "switchToFrench": "Switch to French",
+  "switchToEnglish": "Switch to English",
+  "goToAbout": "About",
+  "backToHome": "Back to Home",
+  "aboutTitle": "About",
+  "aboutDescription": "This is the about page. Internationalization is working correctly."
+}
